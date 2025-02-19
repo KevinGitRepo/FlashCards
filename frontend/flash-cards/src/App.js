@@ -29,6 +29,7 @@ function App() {
       <Menu setChosenTable={setChosenTable}
             chosenTable={chosenTable}
             data={data}
+            setData={setData}
             setCards={setCards}/>
 
       <Flashcard Front={front}

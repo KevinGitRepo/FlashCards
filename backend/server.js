@@ -1,7 +1,7 @@
 const express = require('express');
 const path = require('path');
 const cors = require('cors');
-const {Client} = require('pg');
+const {Client, Pool} = require('pg');
 const format = require('pg-format');
 
 require('dotenv').config({
@@ -14,6 +14,9 @@ app.use(cors());
 app.use(express.json());
 
 const clientConfig = {connectionString: process.env.DATABASE_URL_FLASHCARDS};
+const poolConfig = {connectionString: process.env.DATABASE_URL_FLASHCARDS};
+
+const pool = new Pool(poolConfig);
 
 function correctTableName(tableName) {
     const regex = /^[a-zA-Z0-9_]+$/;
@@ -96,18 +99,31 @@ app.post('/api/cards', async (req, res) => {
 });
 
 app.post('/api/create_table', async (req, res) => {
-    const client = new Client(clientConfig);
+    const { tableName, data } = req.body;
+
+    const client = await pool.connect();
     
     try {
-        await client.connect();
-        const { tableName } = req.body;
-
+        await client.query('BEGIN');
         addNewTable(tableName);
+
+        const sqlQuery = format(`
+            INSERT INTO %I (Questions, Answers) VALUES (%1, %2);
+            `, tableName);
+
+        for (const row of data) {
+            const values = [row.Questions, row.Answers];
+            await client.query(sqlQuery, values);
+        }
+
+        await client.query('COMMIT');
+        res.status(200);
     } catch (err) {
+        await client.query('ROLLBACK');
         console.error('Error fetching questions.', err);
         res.status(500).json({ error: 'Error fetching questions from database' });
     } finally {
-        await client.end();
+        client.release();
     }
 });
 

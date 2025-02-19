@@ -1,11 +1,11 @@
 import React, {useState, useEffect} from "react";
+import { NewData } from "./NewData";
 
 export function Menu(props) {
-    const [newTableName, setNewTableName] = useState(null);
     const [sentNewTable, setSentNewTable] = useState(false);
 
     useEffect(() => {
-
+        props.setData(props.data);
     }, [sentNewTable]);
 
     const handleTablePick = async (tableName) => {
@@ -25,24 +25,6 @@ export function Menu(props) {
         
     };
 
-    const handleNewTable = (event) => {
-        setNewTableName(event.target.value);
-    }
-
-    const handleSubmit = async (tableName) => {
-        setSentNewTable(true);
-        try {
-            props.setChosenTable(tableName);
-            await fetch('http://localhost:5000/api/create_table', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', },
-                body: JSON.stringify({ tableName: tableName }),
-            });
-        } catch (err) {
-            console.error('Error fetching questions.', err);
-        }
-    }
-
     return (
         <div>
             <div>
@@ -60,17 +42,9 @@ export function Menu(props) {
                     ))
                 }
             </div>
-            <div>
-                {!sentNewTable && 
-                    <form onSubmit={handleSubmit}>
-                        <label>
-                            Name for new table:
-                            <input type="text" value={newTableName} onChange={handleNewTable}/>
-                        </label>
-                        <input type="submit" value="Submit"/>
-                    </form>
-                }
-            </div>
+            <NewData sentNewTable={sentNewTable}
+                     setChosenTable={props.setChosenTable}
+                     setSentNewTable={setSentNewTable}/>
         </div>
     )
 }
