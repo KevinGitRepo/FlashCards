@@ -42,19 +42,7 @@ async function addNewTable(tableName) {
     try {
         await client.connect();
         await client.query(sqlQuery);
-    } catch (err) {
-        console.error(err);
-    } finally {
-        await client.end();
-    }
-}
-
-async function insertDatabase() {
-    const query = `INSERT INTO "Biology" (question, answer) VALUES ('What is the captial of France?', 'Paris'), ('Who wrote Hamlet?', 'William Shakespeare'), ('What is 2 + 2?', '4');`
-    const client = new Client(clientConfig);
-    try {
-        await client.connect();
-        await client.query(query);
+        console.log("Added table: " + tableName + " to database.");
     } catch (err) {
         console.error(err);
     } finally {
@@ -101,6 +89,8 @@ app.post('/api/cards', async (req, res) => {
 app.post('/api/create_table', async (req, res) => {
     const { tableName, data } = req.body;
 
+    console.log(req.body);
+
     const client = await pool.connect();
     
     try {
@@ -108,20 +98,20 @@ app.post('/api/create_table', async (req, res) => {
         addNewTable(tableName);
 
         const sqlQuery = format(`
-            INSERT INTO %I (Questions, Answers) VALUES (%1, %2);
+            INSERT INTO "%I" (question, answer) VALUES ($1, $2);
             `, tableName);
 
         for (const row of data) {
-            const values = [row.Questions, row.Answers];
-            await client.query(sqlQuery, values);
+            const query = `INSERT INTO "${tableName}" (question, answer) VALUES ('${row.Questions}', '${row.Answers}')`;
+            await client.query(query);
         }
 
         await client.query('COMMIT');
         res.status(200);
     } catch (err) {
         await client.query('ROLLBACK');
-        console.error('Error fetching questions.', err);
-        res.status(500).json({ error: 'Error fetching questions from database' });
+        console.error('Error entering questions.', err);
+        res.status(500).json({ error: 'Error entering questions from database' });
     } finally {
         client.release();
     }

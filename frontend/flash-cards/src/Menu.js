@@ -6,7 +6,7 @@ export function Menu(props) {
 
     useEffect(() => {
         props.setData(props.data);
-    }, [sentNewTable]);
+    }, [props]);
 
     const handleTablePick = async (tableName) => {
         try {

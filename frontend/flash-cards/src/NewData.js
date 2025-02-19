@@ -3,24 +3,29 @@ import * as XLSX from 'xlsx';
 
 export function NewData(props) {
 
-    const [newTableName, setNewTableName] = useState(null);
-    const [selectedFile, setSelectedFile] = useState(null);
+    const [newTableName, setNewTableName] = useState("");
+    const [newTableBool, setNewTableBool] = useState(false);
 
     const handleNewTable = (event) => {
         setNewTableName(event.target.value);
     }
 
-    const handleSubmit = async () => {
-        if (!selectedFile) {
-            alert("Please enter a file");
+    function correctTableName(tableName) {
+        const regex = /^[a-zA-Z0-9_]+$/;
+        return regex.test(tableName);
+    }
+
+    const handleSubmit = async (event) => {
+        const file = event.target.files[0];
+        const tableName = newTableName === "" ? file.name.substring(0, file.name.indexOf('.')) : newTableName;
+
+        if (!correctTableName(tableName)) {
+            alert("Enter a valid table name. A-Z, 0-9 characters only.");
             return;
         }
 
-        if (!newTableName) {
-            setNewTableName(selectedFile.name);
-        }
-
         const reader = new FileReader();
+        reader.readAsArrayBuffer(file);
         reader.onload = async () => {
             const data = reader.result; // File data
             const excelWorkbook = XLSX.read(data, {type: 'array'});
@@ -32,40 +37,36 @@ export function NewData(props) {
             const jsonData = XLSX.utils.sheet_to_json(sheet);
 
             try {
-                props.setChosenTable(newTableName);
+                
                 const response = await fetch('http://localhost:5000/api/create_table', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json', },
-                    body: JSON.stringify({ tableName: newTableName, data: jsonData }),
+                    body: JSON.stringify({ tableName: tableName, data: jsonData }),
                 });
-
-                props.setSentNewTable(response.ok);
+                props.setChosenTable(tableName);
+                setNewTableBool(response.ok);
             } catch (err) {
                 console.error('Error fetching questions.', err);
             }
         }
     }
 
-    const handleFileChange = (event) => {
-        setSelectedFile(event.target.files[0])
-    }
-
     return (
         <div>
-            {!props.sentNewTable && 
-                    <form onSubmit={handleSubmit}>
-                        <label>
-                            Enter a table name:
-                            <input type="text" onChange={handleNewTable}/>
-                        </label>
-                        <input
-                        type="file"
-                        accept=".xlsx, .xls"
-                        onChange={handleFileChange}
-                        />
-                        <input type="submit" value="Submit"/>
-                        <p>If no table name entered, file name will be table name.</p>
-                    </form>
+            {!newTableBool && 
+                <div>
+                    <label>
+                        Enter a table name:
+                        <input type="text" onChange={handleNewTable}/>
+                    </label>
+                    <input
+                    type="file"
+                    accept=".xlsx, .xls"
+                    onChange={handleSubmit}
+                    />
+                    <input type="submit" value="Submit" onClick={handleSubmit}/>
+                    <p>If no table name entered, file name will be table name.</p>
+                </div>
             }
         </div>
     );
